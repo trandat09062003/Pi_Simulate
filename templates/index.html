@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi & Beaglebone Thread Simulator</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            
+            --primary: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --ch1-color: #facc15; /* Yellow */
+            --ch2-color: #22d3ee; /* Cyan */
+            --ch3-color: #e879f9; /* Magenta */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(232, 121, 249, 0.1) 0px, transparent 50%);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        /* Container Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                grid-template-columns: 380px 1fr;
+            }
+        }
+
+        /* Header */
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6, #e879f9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .header-title p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .system-status {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .pulse-led {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Glassmorphism Panel */
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .panel:hover {
+            box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.08);
+        }
+
+        .panel-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .panel-title i {
+            color: var(--primary);
+        }
+
+        /* Controls Section */
+        .control-group {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-color);
+        }
+
+        .control-value {
+            font-family: 'Fira Code', monospace;
+            color: var(--primary);
+        }
+
+        .input-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            margin: 8px 0;
+        }
+
+        .input-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary);
+            transition: transform 0.1s;
+        }
+
+        .input-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Specific sliders */
+        #pot-slider::-webkit-slider-thumb { background: var(--ch2-color); box-shadow: 0 0 10px var(--ch2-color); }
+        #pwm40-slider::-webkit-slider-thumb { background: var(--ch3-color); box-shadow: 0 0 10px var(--ch3-color); }
+        #blur-slider::-webkit-slider-thumb { background: var(--success); box-shadow: 0 0 10px var(--success); }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Oscilloscope Display */
+        .scope-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .scope-screen-wrapper {
+            position: relative;
+            background: #020617;
+            border: 2px solid #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 16 / 9;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        #scope-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .scope-legend {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .channel-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.75rem;
+        }
+
+        .channel-name {
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .channel-name::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .ch1 .channel-name { color: var(--ch1-color); }
+        .ch1 .channel-name::before { background-color: var(--ch1-color); box-shadow: 0 0 6px var(--ch1-color); }
+        .ch2 .channel-name { color: var(--ch2-color); }
+        .ch2 .channel-name::before { background-color: var(--ch2-color); box-shadow: 0 0 6px var(--ch2-color); }
+        .ch3 .channel-name { color: var(--ch3-color); }
+        .ch3 .channel-name::before { background-color: var(--ch3-color); box-shadow: 0 0 6px var(--ch3-color); }
+
+        .ch-val {
+            font-family: 'Fira Code', monospace;
+            color: var(--text-muted);
+        }
+
+        /* Image comparison card */
+        .image-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 640px) {
+            .image-section {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .img-card {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .img-card span {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .img-wrapper {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .img-wrapper img:hover {
+            transform: scale(1.03);
+        }
+
+        /* Logs console */
+        .log-console-card {
+            grid-column: 1 / -1;
+        }
+
+        .tab-headers {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .tab-btn.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--primary);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+
+        .console-screen {
+            background: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 12px;
+            height: 180px;
+            overflow-y: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            color: #38bdf8;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .console-line {
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .console-line.client { color: #38bdf8; }
+        .console-line.server { color: #fb7185; }
+        .console-line.thread { color: #34d399; }
+
+        /* Path warning banner */
+        .path-banner {
+            grid-column: 1 / -1;
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.75rem;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- Header -->
+        <header>
+            <div class="header-title">
+                <h1>Hệ Thống Mô Phỏng Đa Luồng Raspberry Pi 4B</h1>
+                <p>Simulation & Dashboard điều khiển thời gian thực | Thiết kế cao cấp</p>
+            </div>
+            <div class="system-status">
+                <div class="status-badge">
+                    <div class="pulse-led"></div>
+                    <span>Hệ thống hoạt động</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Path Warning Banner -->
+        <div class="path-banner">
+            <i class="fa-solid fa-circle-info"></i>
+            <span><strong>Thư mục mô phỏng:</strong> <span id="base-path-display">Loading...</span> (Tự động chuyển về thư mục cục bộ nếu chạy trên PC thiếu user 'debian').</span>
+        </div>
+
+        <!-- Column 1: Controls (Left Panel) -->
+        <div class="panel">
+            <div class="panel-title">
+                <i class="fa-solid fa-sliders"></i>
+                <h2>Bảng Điều Khiển</h2>
+            </div>
+
+            <!-- Potentiometer Slider (Thread 2) -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Biến trở giả lập (ADS1115)</span>
+                    <span class="control-value" id="pot-val-display">1.65 V</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: -6px;">
+                    Cập nhật chu kỳ PWM 15ms | GPIO 12
+                </div>
+                <input type="range" class="input-slider" id="pot-slider" min="0" max="3.3" step="0.05" value="1.65">
+                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                    <span>0.0V (0%)</span>
+                    <span>3.3V (100%)</span>
+                </div>
+            </div>
+
+            <!-- PWM 40ms Control (Thread 4) -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Độ rộng xung (Flask Control)</span>
+                    <span class="control-value" id="pwm40-val-display">50.0%</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: -6px;">
+                    Ghi file <strong>cau6.txt</strong> | Chu kỳ PWM 40ms | GPIO 12
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="range" class="input-slider" id="pwm40-slider" min="1" max="100" step="1" value="50" style="flex: 1;">
+                    <input type="number" id="pwm40-num" min="1" max="100" value="50" style="width: 55px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; padding: 4px; text-align: center; font-size: 0.8rem; font-family: 'Fira Code', monospace; outline: none;">
+                </div>
+                <button class="btn" id="btn-save-pwm40"><i class="fa-solid fa-floppy-disk"></i> Ghi nhận cau6.txt</button>
+            </div>
+
+            <!-- Gaussian Blur Control (Thread 3) -->
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Độ làm mờ Gaussian (Kernel Size)</span>
+                    <span class="control-value" id="blur-val-display">15 px</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: -6px;">
+                    Luồng 3: Làm mờ ảnh và lưu sang <strong>cau5.*</strong>
+                </div>
+                <input type="range" class="input-slider" id="blur-slider" min="1" max="99" step="2" value="15">
+                <div style="font-size: 0.7rem; display: flex; justify-content: space-between; color: var(--text-muted); margin-top: -6px;">
+                    <span>Nhẹ</span>
+                    <span id="blur-status-txt" style="color: var(--success); font-weight: 600;">Chờ...</span>
+                    <span>Mạnh</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 2: Dashboard Content (Right Area) -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- Scope Panel -->
+            <div class="panel scope-card">
+                <div class="panel-title">
+                    <i class="fa-solid fa-wave-square"></i>
+                    <h2>Máy Hiện Sóng Giả Lập (3-Channel Oscilloscope)</h2>
+                </div>
+                
+                <div class="scope-screen-wrapper">
+                    <canvas id="scope-canvas"></canvas>
+                </div>
+                
+                <div class="scope-legend">
+                    <div class="channel-info ch1">
+                        <span class="channel-name">CH1 (GPIO 25)</span>
+                        <span class="ch-val">Xung Vuông 13kHz</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">T = 76.92µs</span>
+                    </div>
+                    <div class="channel-info ch2">
+                        <span class="channel-name">CH2 (GPIO 12)</span>
+                        <span class="ch-val" id="scope-ch2-info">PWM 15ms: 50%</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">T = 15ms (ADS1115)</span>
+                    </div>
+                    <div class="channel-info ch3">
+                        <span class="channel-name">CH3 (GPIO 12)</span>
+                        <span class="ch-val" id="scope-ch3-info">PWM 40ms: 50%</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">T = 40ms (cau6.txt)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Processing Panel (Thread 3) -->
+            <div class="panel">
+                <div class="panel-title">
+                    <i class="fa-regular fa-image"></i>
+                    <h2>Luồng 3: Kết Quả Gaussian Blur (Làm Mờ Ảnh Chân Dung)</h2>
+                </div>
+                <div class="image-section">
+                    <div class="img-card">
+                        <span>Ảnh Gốc (anh.*)</span>
+                        <div class="img-wrapper">
+                            <img id="img-orig" src="/image/original" alt="Ảnh gốc">
+                        </div>
+                    </div>
+                    <div class="img-card">
+                        <span>Ảnh Sau Xử Lý (cau5.*)</span>
+                        <div class="img-wrapper">
+                            <img id="img-blurred" src="/image/blurred" alt="Ảnh làm mờ">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Row 4: Log Output Console (Bottom Panel) -->
+        <div class="panel log-console-card">
+            <div class="tab-headers">
+                <button class="tab-btn active" id="tab-socket"><i class="fa-solid fa-network-wired"></i> Nhật ký Socket TCP (Slide 112)</button>
+                <button class="tab-btn" id="tab-threads"><i class="fa-solid fa-microchip"></i> Nhật ký 4 Luồng Thực Thi</button>
+            </div>
+            
+            <div class="console-screen" id="console-display">
+                <!-- Log lines will go here -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Cấu hình WebSocket/HTTP Pooling ---
+        let currentTab = 'socket'; // 'socket' hoặc 'threads'
+        let baseDir = '';
+        
+        // --- Biến lưu trữ trạng thái chạy sóng ---
+        let potVoltage = 1.65;
+        let pwm15Duty = 50.0;
+        let pwm40Duty = 50.0;
+        let gpio25_state = 0;
+        let gpio12_state_15ms = 0;
+        let gpio12_state_40ms = 0;
+        
+        // --- Các Element ---
+        const potSlider = document.getElementById('pot-slider');
+        const potValDisplay = document.getElementById('pot-val-display');
+        
+        const pwm40Slider = document.getElementById('pwm40-slider');
+        const pwm40Num = document.getElementById('pwm40-num');
+        const pwm40ValDisplay = document.getElementById('pwm40-val-display');
+        const btnSavePwm40 = document.getElementById('btn-save-pwm40');
+        
+        const blurSlider = document.getElementById('blur-slider');
+        const blurValDisplay = document.getElementById('blur-val-display');
+        const blurStatusTxt = document.getElementById('blur-status-txt');
+        
+        const basePathDisplay = document.getElementById('base-path-display');
+        
+        const tabSocket = document.getElementById('tab-socket');
+        const tabThreads = document.getElementById('tab-threads');
+        const consoleDisplay = document.getElementById('console-display');
+        
+        const imgOrig = document.getElementById('img-orig');
+        const imgBlurred = document.getElementById('img-blurred');
+        
+        const scopeCh2Info = document.getElementById('scope-ch2-info');
+        const scopeCh3Info = document.getElementById('scope-ch3-info');
+        
+        // --- Xử lý sự kiện Tabs ---
+        tabSocket.addEventListener('click', () => {
+            tabSocket.classList.add('active');
+            tabThreads.classList.remove('active');
+            currentTab = 'socket';
+            updateLogsDisplay();
+        });
+
+        tabThreads.addEventListener('click', () => {
+            tabThreads.classList.add('active');
+            tabSocket.classList.remove('active');
+            currentTab = 'threads';
+            updateLogsDisplay();
+        });
+
+        // --- Xử lý chỉnh slider Potentiometer ---
+        potSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            potValDisplay.textContent = val.toFixed(2) + " V";
+            // Gửi lên API cập nhật
+            fetch('/api/set_pot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ voltage: val })
+            });
+        });
+
+        // --- Xử lý đồng bộ Slider và Ô nhập số của PWM 40ms ---
+        pwm40Slider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            pwm40Num.value = val;
+            pwm40ValDisplay.textContent = val.toFixed(1) + "%";
+        });
+
+        pwm40Num.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val)) val = 1;
+            if (val < 1) val = 1;
+            if (val > 100) val = 100;
+            pwm40Slider.value = val;
+            pwm40ValDisplay.textContent = val.toFixed(1) + "%";
+        });
+
+        btnSavePwm40.addEventListener('click', () => {
+            const val = parseInt(pwm40Slider.value);
+            fetch('/api/set_pwm40', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ duty_cycle: val })
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    btnSavePwm40.style.background = 'linear-gradient(135deg, var(--success), #059669)';
+                    setTimeout(() => {
+                        btnSavePwm40.style.background = '';
+                    }, 1000);
+                }
+            });
+        });
+
+        // --- Xử lý chỉnh Slider Gaussian Blur ---
+        blurSlider.addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (val % 2 === 0) val += 1;
+            blurValDisplay.textContent = val + " px";
+            fetch('/api/set_blur', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kernel: val })
+            });
+        });
+
+        blurSlider.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            blurValDisplay.textContent = val + " px";
+        });
+
+        // --- Lưu trữ log để chuyển đổi tab ---
+        let socketLogs = [];
+        let threadLogs = [];
+
+        function updateLogsDisplay() {
+            consoleDisplay.innerHTML = '';
+            const logs = currentTab === 'socket' ? socketLogs : threadLogs;
+            const cssClass = currentTab === 'socket' ? 'client' : 'thread';
+            
+            logs.forEach(line => {
+                const div = document.createElement('div');
+                div.className = `console-line ${cssClass}`;
+                div.textContent = line;
+                consoleDisplay.appendChild(div);
+            });
+            // Tự động cuộn xuống đáy
+            consoleDisplay.scrollTop = consoleDisplay.scrollHeight;
+        }
+
+        // --- API Pooling định kỳ ---
+        function pollStatus() {
+            fetch('/api/status')
+                .then(res => res.json())
+                .then(data => {
+                    baseDir = data.base_dir;
+                    basePathDisplay.textContent = baseDir;
+                    
+                    // Đồng bộ slider nếu không đang kéo
+                    if (document.activeElement !== potSlider) {
+                        potSlider.value = data.pot_voltage;
+                        potValDisplay.textContent = data.pot_voltage.toFixed(2) + " V";
+                    }
+                    if (document.activeElement !== pwm40Slider && document.activeElement !== pwm40Num) {
+                        pwm40Slider.value = data.pwm40_duty;
+                        pwm40Num.value = Math.round(data.pwm40_duty);
+                        pwm40ValDisplay.textContent = data.pwm40_duty.toFixed(1) + "%";
+                    }
+                    if (document.activeElement !== blurSlider) {
+                        blurSlider.value = data.blur_kernel;
+                        blurValDisplay.textContent = data.blur_kernel + " px";
+                    }
+                    
+                    blurStatusTxt.textContent = data.blur_status;
+                    if (data.blur_status.includes("Lỗi")) {
+                        blurStatusTxt.style.color = 'var(--danger)';
+                    } else if (data.blur_status.includes("Hoàn thành")) {
+                        blurStatusTxt.style.color = 'var(--success)';
+                        // Cập nhật lại nguồn ảnh để tải ảnh mới (với dấu thời gian tránh cache)
+                        const timestamp = new Date().getTime();
+                        imgBlurred.src = `/image/blurred?t=${timestamp}`;
+                    } else {
+                        blurStatusTxt.style.color = 'var(--warning)';
+                    }
+                    
+                    // Trạng thái sóng phục vụ vẽ Canvas
+                    potVoltage = data.pot_voltage;
+                    pwm15Duty = data.pwm15_duty;
+                    pwm40Duty = data.pwm40_duty;
+                    gpio25_state = data.gpio25_state;
+                    gpio12_state_15ms = data.gpio12_state_15ms;
+                    gpio12_state_40ms = data.gpio12_state_40ms;
+                    
+                    scopeCh2Info.textContent = `PWM 15ms: ${pwm15Duty.toFixed(1)}%`;
+                    scopeCh3Info.textContent = `PWM 40ms: ${pwm40Duty.toFixed(1)}%`;
+                    
+                    // Cập nhật logs
+                    socketLogs = data.socket_logs;
+                    threadLogs = data.thread_logs;
+                    updateLogsDisplay();
+                })
+                .catch(err => console.error("Lỗi pooling API:", err));
+        }
+
+        // Pooling mỗi 500ms
+        setInterval(pollStatus, 500);
+        pollStatus();
+
+        // --- Oscilloscope Canvas Rendering ---
+        const canvas = document.getElementById('scope-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function drawOscilloscope() {
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Xóa màn hình
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Vẽ lưới điện (Oscilloscope Grid)
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            
+            // Lưới dọc
+            const xDivisions = 10;
+            const xStep = width / xDivisions;
+            for (let i = 1; i < xDivisions; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * xStep, 0);
+                ctx.lineTo(i * xStep, height);
+                ctx.stroke();
+            }
+            
+            // Lưới ngang
+            const yDivisions = 6;
+            const yStep = height / yDivisions;
+            for (let i = 1; i < yDivisions; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * yStep);
+                ctx.lineTo(width, i * yStep);
+                ctx.stroke();
+            }
+            
+            // Vẽ trục trung tâm nét đứt
+            ctx.strokeStyle = '#334155';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2);
+            ctx.lineTo(width, height / 2);
+            ctx.moveTo(width / 2, 0);
+            ctx.lineTo(width / 2, height);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset nét đứt
+
+            const now = Date.now() / 1000.0;
+            
+            // ----------------------------------------
+            // Kênh 1 (Vàng): Xung vuông 13kHz (GPIO 25)
+            // ----------------------------------------
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            
+            const ch1_y_center = height / 6.0; // Phân vùng phía trên
+            const ch1_amp = height / 10.0;
+            
+            // Để hiển thị xung 13kHz, ta dùng chu kỳ biểu đồ cực ngắn
+            // 13kHz có chu kỳ là 76.9µs. Ta hiển thị khoảng 10 chu kỳ trong 1ms
+            const ch1_freq = 13000; 
+            
+            for (let x = 0; x < width; x++) {
+                // Ánh xạ tọa độ x sang khoảng thời gian 0 đến 0.0008 giây (800µs)
+                const t_offset = (x / width) * 0.0008;
+                const total_t = now * 0.02 + t_offset; // Nhân 0.02 để sóng chạy từ từ sang trái
+                
+                const val = (Math.floor(total_t * ch1_freq * 2) % 2 === 0) ? 1 : 0;
+                const y = ch1_y_center - (val - 0.5) * 2 * ch1_amp;
+                
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // ----------------------------------------
+            // Kênh 2 (Lam): PWM 15ms (GPIO 12 từ Biến trở)
+            // ----------------------------------------
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            
+            const ch2_y_center = height / 2.0; // Phân vùng giữa
+            const ch2_amp = height / 10.0;
+            const ch2_period = 0.015; // 15ms
+            
+            for (let x = 0; x < width; x++) {
+                // Ánh xạ tọa độ x sang khoảng thời gian 0 đến 0.05 giây (50ms) để thấy ~3 chu kỳ
+                const t_offset = (x / width) * 0.05;
+                const total_t = now * 0.2 + t_offset; // Cho chạy sóng
+                
+                const pos = total_t % ch2_period;
+                const width_on = (pwm15Duty / 100.0) * ch2_period;
+                const val = (pos < width_on) ? 1 : 0;
+                const y = ch2_y_center - (val - 0.5) * 2 * ch2_amp;
+                
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // ----------------------------------------
+            // Kênh 3 (Hồng): PWM 40ms (GPIO 12 từ Flask UI)
+            // ----------------------------------------
+            ctx.strokeStyle = '#e879f9';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            
+            const ch3_y_center = height * (5.0 / 6.0); // Phân vùng dưới
+            const ch3_amp = height / 10.0;
+            const ch3_period = 0.040; // 40ms
+            
+            for (let x = 0; x < width; x++) {
+                // Ánh xạ tọa độ x sang khoảng thời gian 0 đến 0.12 giây (120ms) để thấy ~3 chu kỳ
+                const t_offset = (x / width) * 0.12;
+                const total_t = now * 0.2 + t_offset; // Cho chạy sóng
+                
+                const pos = total_t % ch3_period;
+                const width_on = (pwm40Duty / 100.0) * ch3_period;
+                const val = (pos < width_on) ? 1 : 0;
+                const y = ch3_y_center - (val - 0.5) * 2 * ch3_amp;
+                
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Gọi lại khung hình tiếp theo
+            requestAnimationFrame(drawOscilloscope);
+        }
+        
+        // Khởi động hoạt hình vẽ sóng
+        requestAnimationFrame(drawOscilloscope);
+        
+    </script>
+</body>
+</html>

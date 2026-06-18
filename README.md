@@ -1,6 +1,6 @@
 # Mô Phỏng Hệ Thống Đa Luồng - Raspberry Pi 4B
 
-Đây là source code bài tập thực hành môn Hệ nhúng. Project này mô phỏng lại 4 luồng xử lý tín hiệu và điều khiển trên Linux, giúp test code và logic dễ dàng hơn trên máy tính cá nhân mà không cần chạy trực tiếp trên kit phần cứng (Raspberry Pi/Beaglebone).
+Project này mô phỏng lại 4 luồng xử lý tín hiệu và điều khiển trên Linux, giúp test code và logic dễ dàng hơn trên máy tính cá nhân mà không cần chạy trực tiếp trên kit phần cứng (Raspberry Pi/Beaglebone).
 
 ## Cấu trúc project
 

@@ -6,7 +6,7 @@
 
 - `app.py`: File code chính. Trong này chứa 4 luồng thực thi yêu cầu của đề bài, xử lý Socket Client/Server và chạy Flask server để hiển thị kết quả.
 - `templates/index.html`: Giao diện web dashboard để điều khiển các thông số (kéo thanh trượt) và xem máy hiện sóng (oscilloscope) của các chân GPIO.
-- `HoVaTenSV/`: Thư mục để chứa file ảnh test (mô phỏng đường dẫn `/home/debian/HoVaTenSV/` trên kit thật).
+- `NguyenVanQuan/`: Thư mục để chứa file ảnh test (mô phỏng đường dẫn `/home/debian/NguyenVanQuan/` trên kit thật).
 - `run_simulation.sh`: File script để khởi chạy nhanh project.
 
 ## Chi tiết 4 luồng nghiệp vụ
@@ -20,7 +20,7 @@
    - Từ mức điện áp (0V - 3.3V) sẽ đổi ra duty cycle để phát PWM chu kỳ 15ms tại chân GPIO_12. Có thể chỉnh điện áp giả lập này trực tiếp trên giao diện web.
 
 3. **Luồng 3 (Xử lý ảnh Gaussian Blur)**: 
-   - Tự động quét lấy ảnh trong file `anh.*` (nằm ở `/home/debian/HoVaTenSV/` hoặc thư mục local), áp dụng bộ lọc Gaussian Blur bằng OpenCV và lưu kết quả ra `cau5.*`.
+   - Tự động quét lấy ảnh trong file `anh.*` (nằm ở `/home/debian/NguyenVanQuan/` hoặc thư mục local), áp dụng bộ lọc Gaussian Blur bằng OpenCV và lưu kết quả ra `cau5.*`.
    - Có thể chỉnh độ mờ (Kernel size) trên dashboard.
 
 4. **Luồng 4 (GPIO 12 - PWM 40ms + Flask)**: 

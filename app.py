@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # --- Cấu hình Thư mục Lưu trữ (Base Directory) ---
 def get_base_dir():
-    target = "/home/debian/HoVaTenSV"
+    target = "/home/debian/NguyenVanQuan"
     try:
         if not os.path.exists(target):
             os.makedirs(target, exist_ok=True)
@@ -22,7 +22,7 @@ def get_base_dir():
         return target
     except Exception:
         # Fallback về thư mục cục bộ của dự án
-        local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HoVaTenSV")
+        local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "NguyenVanQuan")
         os.makedirs(local_dir, exist_ok=True)
         return local_dir
 
